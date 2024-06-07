@@ -21,4 +21,75 @@ files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
 print(folder_path)
 print(files)
 ```
+```{r}
+data_frames <- list()
+
+# Loop po folderze, rozdziel dane po osobnych df'ach 
+for (file in files) {
+  
+  df_name <- basename(file)
+  
+  df_name <- gsub("\\.csv$", "", df_name)
+
+  data <- read_csv(file)  
+
+  data_frames[[df_name]] <- data
+  
+   assign(df_name, data)
+}
+
+```
+```{r}
+#przykład użycia
+print(pjm_hourly_est)
+print(data_frames)
+```
+```{r}
+#Małe przygotowanko danych, tworze TS obiekty na podstawie danych 
+#tworzę z tego nową listę tylko z obiektami pod analize szeregów
+
+ts_dataframes <- list()
+#ma same NA w kolumnach, więc do wywalenia pjm_hourly_est
+data_frames <- data_frames [setdiff(names(data_frames), "pjm_hourly_est")]
+
+for (name in names(data_frames)) {
+  
+  dataframe <- data_frames[[name]]
+  
+  dataframe$Datetime <- as.Date(dataframe$Datetime)
+  
+  ts_data <- ts(
+    data = dataframe[[2]], #W R'ce obiekty w listach liczy się od 1, zawsze biorę 2-gą kolumnę z danymi 
+    start = c(year(min(dataframe$Datetime)), yday(min(dataframe$Datetime))),
+    frequency = 365
+  )
+  
+  ts_dataframes[[name]] <- ts_data
+}
+print(ts_dataframes)
+```
+```{r}
+
+plots <- list()
+
+for (name in names(data_frames)) {
+  dataframe <- data_frames[[name]]
+  
+  dataframe$Datetime <- as.Date(dataframe[[1]])
+  
+   cleaned_name <- gsub("_hourly|_Load", "", name)
+
+  plot <- ggplot(dataframe, aes(x = Datetime, y = dataframe[[2]])) +
+    geom_line() +
+    labs(title = paste("Godzinowe zużycie energii dla:", cleaned_name), x = "Date", y = "Values") +
+    theme_minimal()
+  
+  
+  plots[[name]] <- plot
+  
+
+  print(plot)
+}
+
+```
 
