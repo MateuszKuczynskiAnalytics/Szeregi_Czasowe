@@ -1,21 +1,17 @@
 name: Build LaTeX document
-
 on: [push, pull_request]
-
 jobs:
-  build:
+  build_latex:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4 
-    - name: Set up LaTeX
-      uses: xu-cheng/latex-action@v3
-      with:
-        root_file: raport/raport.tex
-    - name: Compile LaTeX document
-      run: latexmk -pdf raport/raport.tex
-    - name: Upload PDF
-      uses: actions/upload-artifact@v3  
-      with:
-        name: compiled-document
-        path: raport/raport.pdf
+      - name: Set up Git repository
+        uses: actions/checkout@v4
+      - name: Compile LaTeX document
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: raport/raport.pdf
+      - name: Upload PDF file
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDF
+          path: raport.pdf
