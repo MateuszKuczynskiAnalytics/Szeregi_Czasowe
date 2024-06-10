@@ -9,7 +9,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3 
     - name: Set up LaTeX
-      uses: xu-cheng/latex-action@v2
+      uses: xu-cheng/latex-action@v3
       with:
         root_file: raport/raport.tex
     - name: Compile LaTeX document
