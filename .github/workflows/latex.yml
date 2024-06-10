@@ -9,9 +9,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up LaTeX
-      uses: dante-ev/latex-action@v2
+      uses: xu-cheng/latex-action@v2
+      with:
+        root_file: raport/raport.tex
     - name: Compile LaTeX document
-      run: latexmk -pdf raport/raport.tex
+      run: latexmk -pdf src/main.tex
     - name: Upload PDF
       uses: actions/upload-artifact@v2
       with:
