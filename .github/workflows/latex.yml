@@ -13,7 +13,7 @@ jobs:
       with:
         root_file: raport/raport.tex
     - name: Compile LaTeX document
-      run: latexmk -pdf src/main.tex
+      run: latexmk -pdf raport/raport.tex
     - name: Upload PDF
       uses: actions/upload-artifact@v2
       with:
