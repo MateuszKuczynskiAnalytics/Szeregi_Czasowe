@@ -18,8 +18,18 @@ jobs:
       - name: List directory contents after compilation
         run: ls -R
 
-      - name: Upload PDF file
+      - name: Commit and push generated PDF
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add raport/raport.pdf
+          git commit -m "Add generated PDF"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload PDF file as artifact
         uses: actions/upload-artifact@v4
         with:
           name: PDF
-          path: raport.pdf
+          path: raport.pdf 
