@@ -1,23 +1,25 @@
-name: LateX to PDF
+name: Build LaTeX document
 
 on: [push, pull_request]
 
 jobs:
   build_latex:
     runs-on: ubuntu-latest
+
     steps:
       - name: Set up Git repository
         uses: actions/checkout@v4
-      - name: latex2pdf
-        id: compile-latex-document
-        uses: thomas-chauvet/latex2pdf-action@1.0.5
+
+      - name: Compile LaTeX document
+        uses: xu-cheng/latex-action@v3
         with:
-          output_dir: raport
-          main_latex_file: raport.tex
-          ctan_packages: amsmath amsfonts lua-uni-algos
-      - name: Upload PDF to the workflow tab
-        id: upload-workflow-tab
+          root_file: raport/raport.tex
+
+      - name: List directory contents after compilation
+        run: ls -R
+
+      - name: Upload PDF file
         uses: actions/upload-artifact@v4
         with:
-          name: raport
+          name: PDF
           path: raport/raport.pdf
