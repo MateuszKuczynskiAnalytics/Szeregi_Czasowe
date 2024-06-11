@@ -26,10 +26,12 @@ jobs:
           git commit -m "Add generated PDF"
           git push
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: Upload PDF file as artifact
         uses: actions/upload-artifact@v4
         with:
           name: PDF
           path: raport.pdf 
+
+          
