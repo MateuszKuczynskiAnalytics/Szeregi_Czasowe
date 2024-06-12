@@ -1,10 +1,6 @@
-name: Build LaTeX document
+name: LaTeX to PDF
 
-on:
-  push:
-    paths:
-      - .github/workflows/latex.yml
-      - raport/raport.tex
+on: [push, pull_request]
 
 jobs:
   build_latex:
@@ -22,21 +18,8 @@ jobs:
       - name: List directory contents after compilation
         run: ls -R
 
-      - name: Commit and push generated PDF
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-        run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
-          git remote set-url origin https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository }}
-          git add raport.pdf
-          git commit -m "Add generated PDF"
-          git push
-
-      - name: Upload PDF file as artifact
-        uses: actions/upload-artifact@v4
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: PDF
-          path: raport.pdf
-
-          
+          files: raport.pdf
