@@ -1,6 +1,10 @@
 name: LaTeX to PDF
 
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - .github/workflows/latex.yml
+      - raport/raport.tex
 
 jobs:
   build_latex:
@@ -14,13 +18,29 @@ jobs:
         uses: xu-cheng/latex-action@v3
         with:
           root_file: raport/raport.tex
-          latexmk_use_xelatex: true
 
       - name: List directory contents after compilation
         run: ls -R
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: raport.pdf
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Upload PDF to Release
+        uses: actions/upload-release-asset@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: raport/raport.pdf
+          asset_name: raport.pdf
+          asset_content_type: application/pdf
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
