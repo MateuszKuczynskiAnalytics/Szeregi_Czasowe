@@ -1,52 +1,76 @@
+Sys.setlocale("LC_TIME", "C")
+
 library(tidyverse)
 library(lubridate)
-library(forecast)
-library(tseries)
+library(feasts)
+library(fpp3)
+library(scales)
+library(imputeTS)
 
 raw_data <- read.csv("Dane/PJME_hourly.csv")
 
-raw_data <- raw_data %>%
-  mutate(datetime = as.POSIXct(Datetime, format = "%Y-%m-%d %H:%M:%S"))
+ts_data <- raw_data %>%
+  rename(datetime = Datetime) %>%
+  mutate(datetime = as_datetime(datetime)) %>%
+  arrange(datetime)
 
-ggplot(raw_data, aes(x = datetime, y = PJME_MW)) +
-  geom_point(size = 0.3) +
-  labs(title = "Time Series Plot",
+#Sprawdzenie duplikatów
+ts_data %>% duplicates(index = datetime)
+
+#Przygotowanie danych
+ts_data <- raw_data %>%
+  rename(datetime = Datetime,
+         h_energy_consumption = PJME_MW) %>%
+  mutate(datetime = as_datetime(datetime)) %>%
+  arrange(datetime) %>%
+  group_by(datetime) %>% #duplikaty zastępujemy średnią z duplikatów
+  summarise(h_energy_consumption = mean(h_energy_consumption, na.rm = TRUE)) %>%
+  as_tsibble(index = datetime) %>%
+  fill_gaps() %>% #nieliczne braki w danych uzupełniamy przy pomocy interpolacji liniowej
+  mutate(h_energy_consumption = na_interpolation(h_energy_consumption))
+
+#Wykres ogólny
+autoplot(ts_data, h_energy_consumption) +
+  labs(title = "Hourly Energy Consumption",
+       subtitle = "PJM East Region: 2001-2018 (PJME)",
        x = "Datetime",
-       y = "PJME_MW") +
-  theme_minimal()
+       y = "Energy Consumption (MW)") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 16, hjust = 0.5),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.caption = element_text(size = 10),
+    panel.grid.major = element_line(color = "grey80"),
+    panel.grid.minor = element_line(color = "grey90"),
+    plot.background = element_rect(fill = "white"),
+    panel.background = element_rect(fill = "white")
+  ) +
+  scale_x_datetime(date_labels = "%Y-%m-%d", date_breaks = "5 years") +
+  scale_y_continuous(labels = scales::comma)
 
-# Create the time series object with frequency = 24 for hourly data
-ts_data <- ts(raw_data$PJME_MW, frequency = 24)
+#Sezonowość roczna
+ts_data %>% 
+  gg_season(h_energy_consumption, labels = "both") +
+  labs(title = "Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
 
-ndiffs(ts_data)
+#Sezonowość tygodniowa
+ts_data %>% 
+  gg_season(h_energy_consumption, period = "week") +
+  theme(legend.position = "none") +
+  labs(title = "Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
 
+#Sezonowość dzienna
+ts_data %>% 
+  gg_season(h_energy_consumption, period = "day") +
+  theme(legend.position = "none") +
+  labs(title = "Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
 
-adf_test <- adf.test(ts_data)
-print(adf_test)
-
-kpss_test <- kpss.test(ts_data)
-print(kpss_test)
-
-autoplot(ts_data) + ggtitle("Original Series")
-
-# Plot the differenced series
-diff_ts_data <- diff(ts_data, differences = 1)
-autoplot(diff_ts_data) + ggtitle("Differenced Series")
-
-ts_data_seasonal_diff <- diff(ts_data, lag = frequency(ts_data))
-autoplot(ts_data_seasonal_diff) + ggtitle("Seasonally Differenced Series")
-
-decomposition <- stl(ts_data, s.window = "periodic")
-
-# Plot the decomposed components
-autoplot(decomposition) + ggtitle("Decomposed Time Series")
-
-seasonal_diff <- diff(ts_data, lag = frequency(ts_data))
-autoplot(seasonal_diff) + ggtitle("Seasonally Differenced Series")
-
-adf_test_seasonal_diff <- adf.test(seasonal_diff)
-print(adf_test_seasonal_diff)
-
-# Perform KPSS test on seasonally differenced data
-kpss_test_seasonal_diff <- kpss.test(seasonal_diff)
-print(kpss_test_seasonal_diff)
