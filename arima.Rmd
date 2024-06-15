@@ -13,7 +13,7 @@ Sys.setlocale("LC_TIME", "C")
 ```
 
 ```{r}
-raw_data <- read.csv("PJME_hourly.csv")
+raw_data <- read.csv("Dane/PJME_hourly.csv")
 
 ts_data <- raw_data %>%
   rename(datetime = Datetime) %>%
