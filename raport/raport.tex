@@ -1,11 +1,69 @@
-\documentclass{article}
+documentclass{article}
+\usepackage{parskip}
+\usepackage[utf8]{inputenc} 
+\usepackage[T1]{fontenc} % Poprawne wyświetlanie polskich znaków
+\usepackage[polish]{babel} % Polskie wsparcie językowe
+\usepackage{datetime2} % Lepsze formatowanie daty
+
 \begin{document}
-\title{Your Paper Title}
-\author{Author Names}
-\date{\today}
+
+\title{Analiza Szeregów Czasowych}
+\author{
+    Łukasz Jarząbkowski \and
+    Mateusz Kuczyński \and
+    Piotr Kowalczyk \and
+    Wiktor Musiałowski \and
+    Andrzej Bednarz
+}
+\date{\DTMdisplaydate{\year}{\month}{\day}{-1}} % Formatowanie daty
+
 \maketitle
 
-\section{Introduction}
-% Your content here
+\section{Opis problemu}
+
+W dzisiejszym dynamicznie rozwijającym się świecie, efektywne zarządzanie zużyciem energii jest kluczowym elementem zapewnienia stabilności i zrównoważonego rozwoju gospodarczego. W kontekście Stanów Zjednoczonych, jako jednego z największych konsumentów energii na świecie, analiza wzorców zużycia energii staje się szczególnie istotna. Projekt ten koncentruje się na analizie szeregów czasowych dziennych zużyć energii w Ameryce, mając na celu zrozumienie i prognozowanie zmian w zapotrzebowaniu na energię.
+
+Głównym celem projektu jest zbadanie wzorców zużycia energii w USA na przestrzeni określonego okresu czasu. Dzięki analizie danych historycznych, możliwe będzie:
+
+\begin{itemize}
+    \item Identyfikacja sezonowych i długoterminowych trendów w zużyciu energii.
+    \item Wykrycie ewentualnych anomalii oraz ich potencjalnych przyczyn.
+    \item Prognozowanie przyszłego zużycia energii z zastosowaniem modeli statystycznych i uczenia maszynowego.
+\end{itemize}
+
+\section{Znaczenie Analizy Zużycia Energii}
+
+Analiza zużycia energii jest niezbędna dla różnych interesariuszy, w tym:
+
+\begin{itemize}
+    \item Operatorów systemów energetycznych, którzy muszą zapewnić niezawodność dostaw energii.
+    \item Decydentów politycznych, którzy opracowują strategie zrównoważonego rozwoju energetycznego.
+    \item Przedsiębiorstw energetycznych, które planują inwestycje w infrastrukturę i zarządzanie zasobami.
+    \item Konsumentów, którzy dążą do optymalizacji zużycia energii i redukcji kosztów.
+\end{itemize}
+
+\subsection{Metodologia}
+% To w razie co może być do zmiany, jeszcze nie wiemy jakie modele konkretnie użyliśmy więc wpisałem tak se żeby było 
+W projekcie zostaną wykorzystane zaawansowane metody analizy szeregów czasowych, takie jak:
+
+\begin{itemize}
+    \item Dekompozycja szeregów czasowych: analiza komponentów trendu, sezonowości i reszt.
+    \item Modele autoregresyjne (AR) oraz modele zintegrowane autoregresyjne ze średnią ruchomą (ARIMA).
+    \item Modele uczenia maszynowego: np. sieci neuronowe rekurencyjne (RNN) i ich zaawansowane wersje, takie jak LSTM (Long Short-Term Memory).
+\end{itemize}
+
+\subsection{Dane}
+
+Dane użyte w projekcie pochodzą z platformy Kaggle, obejmują dzienne zużycie energii w różnych regionach USA. Zostaną one poddane wstępnej obróbce, w tym czyszczeniu, normalizacji i transformacji, aby zapewnić ich jakość i przydatność do analizy.
+
+\subsection{Przewidywane Wyniki}
+
+Projekt ma na celu dostarczenie:
+
+\begin{itemize}
+    \item Dokładnych modeli predykcyjnych, które mogą być użyte do planowania zużycia energii.
+    \item Wglądów w czynniki wpływające na zmienność zużycia energii.
+    \item Rekomendacji dla interesariuszy dotyczących zarządzania zużyciem energii.
+\end{itemize}
 
 \end{document}
