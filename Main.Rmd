@@ -1,95 +1,155 @@
 
-
-
 ```{r}
-library(dplyr)
-library(readr)
-library(httr)
-library(rvest)
+library(tidyverse)
 library(lubridate)
-library(forecast)
-library(ggplot2)
+library(feasts)
+library(fpp3)
+library(scales)
+library(imputeTS)
 library(tseries)
 library(forecast)
-library(grid)
-library(scales)
+library(TSstudio)
+Sys.setlocale("LC_TIME", "C")
 ```
+
 ```{r}
-current_dir <- getwd()
-folder_path <- file.path(current_dir, "Dane")
-files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
-print(folder_path)
-print(files)
-```
-```{r}
-data_frames <- list()
+raw_data <- read.csv("Dane/PJME_hourly.csv")
 
-# Loop po folderze, rozdziel dane po osobnych df'ach 
-for (file in files) {
-  
-  df_name <- basename(file)
-  
-  df_name <- gsub("\\.csv$", "", df_name)
-
-  data <- read_csv(file)  
-
-  data_frames[[df_name]] <- data
-  
-   assign(df_name, data)
-}
+ts_data <- raw_data %>%
+  rename(datetime = Datetime) %>%
+  mutate(datetime = as_datetime(datetime)) %>%
+  arrange(datetime)
 
 ```
+
 ```{r}
-#przykład użycia
-print(pjm_hourly_est)
-print(data_frames)
+#Sprawdzenie duplikatów
+ts_data %>% duplicates(index = datetime)
+
+#Przygotowanie danych
+ts_data <- raw_data %>%
+  rename(datetime = Datetime,
+         h_energy_consumption = PJME_MW) %>%
+  mutate(datetime = as_datetime(datetime)) %>%
+  arrange(datetime) %>%
+  group_by(datetime) %>% #duplikaty zastępujemy średnią z duplikatów
+  summarise(h_energy_consumption = mean(h_energy_consumption, na.rm = TRUE)) %>%
+  as_tsibble(index = datetime) %>%
+  fill_gaps() %>% #nieliczne braki w danych uzupełniamy przy pomocy interpolacji liniowej
+  mutate(h_energy_consumption = na_interpolation(h_energy_consumption))
+```
+
+
+```{r}
+#Wykres ogólny
+autoplot(ts_data, h_energy_consumption) +
+  labs(title = "Hourly Energy Consumption",
+       subtitle = "PJM East Region: 2001-2018 (PJME)",
+       x = "Datetime",
+       y = "Energy Consumption (MW)") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 16, hjust = 0.5),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.caption = element_text(size = 10),
+    panel.grid.major = element_line(color = "grey80"),
+    panel.grid.minor = element_line(color = "grey90"),
+    plot.background = element_rect(fill = "white"),
+    panel.background = element_rect(fill = "white")
+  ) +
+  scale_x_datetime(date_labels = "%Y-%m-%d", date_breaks = "5 years") +
+  scale_y_continuous(labels = scales::comma)
+```
+
+```{r}
+#Sezonowość roczna
+ts_data %>% 
+  gg_season(h_energy_consumption, labels = "both") +
+  labs(title = "Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
+```
+
+```{r}
+#Sezonowość tygodniowa
+ts_data %>% 
+  gg_season(h_energy_consumption, period = "week") +
+  theme(legend.position = "none") +
+  labs(title = "Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
+```
+
+```{r}
+#Sezonowość dzienna
+ts_data %>% 
+  gg_season(h_energy_consumption, period = "day") +
+  theme(legend.position = "none") +
+  labs(title = "Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
+
+```
+
+```{r}
+#test ADF
+adf.test(as.ts(ts_data))
 ```
 ```{r}
-#Małe przygotowanko danych, tworze TS obiekty na podstawie danych 
-#tworzę z tego nową listę tylko z obiektami pod analize szeregów
-
-ts_dataframes <- list()
-#ma same NA w kolumnach, więc do wywalenia pjm_hourly_est
-data_frames <- data_frames [setdiff(names(data_frames), "pjm_hourly_est")]
-
-for (name in names(data_frames)) {
-  
-  dataframe <- data_frames[[name]]
-  
-  dataframe$Datetime <- as.Date(dataframe$Datetime)
-  
-  ts_data <- ts(
-    data = dataframe[[2]], #W R'ce obiekty w listach liczy się od 1, zawsze biorę 2-gą kolumnę z danymi 
-    start = c(year(min(dataframe$Datetime)), yday(min(dataframe$Datetime))),
-    frequency = 365
-  )
-  
-  ts_dataframes[[name]] <- ts_data
-}
-print(ts_dataframes)
+#modelowanie ARIMA/SARIMA funkcją auto.arima + prognoza naiwna
+tomodel <- as.ts(ts_data)
+prog <- naive(tomodel, h = 336) #na następne 2 tygodnie
+accuracy(prog)
+fit <- auto.arima(tomodel, stepwise=TRUE, nmodels=10) #max 10 modeli bo zajmuje bardzo dużo czasu
+checkresiduals(fit)
 ```
+
 ```{r}
+#prognoza wg autoarimy
+accuracy(fit)
+fcast <- forecast(fit, h = 336)
+autoplot(fcast) + ylab("Energy Consumption (MW)")
+```
 
-plots <- list()
+```{r}
+#Model dynamicznej regresji harmonicznej
+fit <- ts_data %>% model(
+  ARIMA(h_energy_consumption ~ PDQ(0, 0, 0) + pdq(d = 0) +
+          fourier(period = "day", K = 10) +
+          fourier(period = "week", K = 8) +
+          fourier(period = "year", K = 5))
+)
 
-for (name in names(data_frames)) {
-  dataframe <- data_frames[[name]]
-  
-  dataframe$Datetime <- as.Date(dataframe[[1]])
-  
-   cleaned_name <- gsub("_hourly|_Load", "", name)
+#Błąd
+glance(fit)
+```
 
-  plot <- ggplot(dataframe, aes(x = Datetime, y = dataframe[[2]])) +
-    geom_line() +
-    labs(title = paste("Godzinowe zużycie energii dla:", cleaned_name), x = "Date", y = "Values") +
-    theme_minimal()
-  
-  
-  plots[[name]] <- plot
-  
+```{r}
+#Prognoza dwutygodniowa
+h <- 24 * 14  
 
-  print(plot)
-}
+forecast <- fit %>%
+  forecast(new_data = new_data(ts_data, h))
+
+start_date <- max(ts_data$datetime) - months(1)
+
+#Wykres prognozy
+autoplot(ts_data %>% filter(datetime >= start_date), h_energy_consumption) +
+  autolayer(forecast, .mean, PI = FALSE, series = "Forecast") +
+  labs(title = "Forecast of Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
+```
+
+```{r}
+#Sprawdzenie rozkładu reszt
+gg_tsresiduals(fit)
+
+#Sprawdzamy normalność reszt
+Box.test(residuals(fit)$.resid, type = "Ljung-Box")
 
 ```
 

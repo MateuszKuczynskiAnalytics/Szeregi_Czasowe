@@ -2,6 +2,7 @@ Sys.setlocale("LC_TIME", "C")
 
 library(tidyverse)
 library(lubridate)
+library(progress)
 library(feasts)
 library(fpp3)
 library(scales)
@@ -73,4 +74,39 @@ ts_data %>%
   labs(title = "Hourly Energy Consumption",
        x = "Datetime",
        y = "Energy Consumption (MW)")
+
+#Model dynamicznej regresji harmonicznej
+fit <- ts_data %>% model(
+  ARIMA(h_energy_consumption ~ PDQ(0, 0, 0) + pdq(d = 0) +
+          fourier(period = "day", K = 10) +
+          fourier(period = "week", K = 5) +
+          fourier(period = "year", K = 3))
+)
+
+glance(fit)$AICc
+
+#Prognoza dwutygodniowa
+h <- 24 * 14  
+
+forecast <- fit %>%
+  forecast(new_data = new_data(ts_data, h))
+
+start_date <- max(ts_data$datetime) - months(1)
+
+#Wykres prognozy
+autoplot(ts_data %>% filter(datetime >= start_date), h_energy_consumption) +
+  autolayer(forecast, .mean, PI = FALSE, series = "Forecast") +
+  labs(title = "Forecast of Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
+
+#Sprawdzenie rozkładu reszt
+gg_tsresiduals(fit)
+
+#Sprawdzamy normalność reszt
+Box.test(residuals(fit)$.resid, type = "Ljung-Box")
+
+
+
+
 

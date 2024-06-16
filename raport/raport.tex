@@ -1,12 +1,30 @@
-documentclass{article}
+\documentclass{article}
 \usepackage{parskip}
 \usepackage[utf8]{inputenc} 
 \usepackage[T1]{fontenc} % Poprawne wyświetlanie polskich znaków
 \usepackage[polish]{babel} % Polskie wsparcie językowe
 \usepackage{datetime2} % Lepsze formatowanie daty
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+ \lstset{
+  language=R,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  stringstyle=\color{red},
+  commentstyle=\color{gray},
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=5pt,
+  breaklines=true,
+  frame=single,
+  captionpos=b,
+}
 
 \begin{document}
-
 \title{Analiza Szeregów Czasowych}
 \author{
     Łukasz Jarząbkowski \and
@@ -18,6 +36,8 @@ documentclass{article}
 \date{\DTMdisplaydate{\year}{\month}{\day}{-1}} % Formatowanie daty
 
 \maketitle
+\thispagestyle{empty} % Usunięcie numeracji strony na stronie tytułowej
+\newpage 
 
 \section{Opis problemu}
 
@@ -43,13 +63,12 @@ Analiza zużycia energii jest niezbędna dla różnych interesariuszy, w tym:
 \end{itemize}
 
 \subsection{Metodologia}
-% To w razie co może być do zmiany, jeszcze nie wiemy jakie modele konkretnie użyliśmy więc wpisałem tak se żeby było 
+
 W projekcie zostaną wykorzystane zaawansowane metody analizy szeregów czasowych, takie jak:
 
 \begin{itemize}
-    \item Dekompozycja szeregów czasowych: analiza komponentów trendu, sezonowości i reszt.
-    \item Modele autoregresyjne (AR) oraz modele zintegrowane autoregresyjne ze średnią ruchomą (ARIMA).
-    \item Modele uczenia maszynowego: np. sieci neuronowe rekurencyjne (RNN) i ich zaawansowane wersje, takie jak LSTM (Long Short-Term Memory).
+    \item Dekompozycja szeregów czasowych: analiza komponentów trendu i sezonowości.
+    \item Modele autoregresyjne (AR) oraz modele zintegrowane autoregresyjne ze średnią ruchomą (ARIMA)
 \end{itemize}
 
 \subsection{Dane}
@@ -66,4 +85,101 @@ Projekt ma na celu dostarczenie:
     \item Rekomendacji dla interesariuszy dotyczących zarządzania zużyciem energii.
 \end{itemize}
 
+\section{Opis rozwiązania problemu}
+\subsection{Problem sezonowości danych}
+ Zużycie energii często zmienia się w zależności od pory roku. W zimie zużycie energii na ogrzewanie wzrasta, natomiast w lecie może wzrosnąć zużycie energii na klimatyzację. Taka zmienność może utrudniać identyfikację długoterminowych trendów, ponadto występują również okresy świąt czy wakacje które równeż mogą powodowac nagłe zmiany w zużyciu energii które nie są reprezentatywne dla reszty sezonu.
+ Kolejnym czynnikiem utrudniającym analize są anomalie pogodowe takie jak fale upałów czy mrozy, które mogą znacząco wpływać na zużycie energii i wprowadzać anomalie do danych.
+ 
+ Ceny energii również mogą się zmieniać w zależności od sezonu, co może wpływać na zachowania konsumpcyjne. Na przykład, wzrost cen energii w zimie może skłaniać użytkowników do oszczędności.
+ Postęp technologiczny  np. w dziedzinie efektywności energetycznej to ostatni z czynników który może wpływać na długoterminowe zużycie energii, co w konsekwencji może być trudne do oddzielenia od sezonowych wzorców.
+ \newpage
+ 
+ \subsection{Wstępna analiza danych i wykresy}
+Do analizy danych wykorzystany został największy zestaw danych: PJME Hourly.
+ Fragment kodu poniżej, zastępuje braki w danych bazowych za pomocą interpolacji liniowej a duplikaty przy pomocy średniej z duplikatów. 
+\begin{lstlisting}[caption={Wczytanie plików z folderu dane i wstępna obróbka}]
+raw_data <- read.csv("Dane/PJME_hourly.csv")
+ts_data <- raw_data %>%
+  rename(datetime = Datetime) %>%
+  mutate(datetime = as_datetime(datetime)) %>%
+  arrange(datetime)
+
+ts_data %>% duplicates(index = datetime)
+
+ts_data <- raw_data %>%
+  rename(datetime = Datetime,
+         h_energy_consumption = PJME_MW) %>%
+  mutate(datetime = as_datetime(datetime)) %>%
+  arrange(datetime) %>%
+  group_by(datetime) %>% 
+  summarise(h_energy_consumption = mean(h_energy_consumption, na.rm = TRUE)) %>%
+  as_tsibble(index = datetime) %>%
+  fill_gaps() %>% 
+  mutate(h_energy_consumption = na_interpolation(h_energy_consumption))
+\end{lstlisting}
+ \newpage
+\begin{lstlisting}[caption={Kod wywołujący wykres ogólny dla konsumpcji energii }]
+autoplot(ts_data, h_energy_consumption) +
+  labs(title = "Hourly Energy Consumption",
+       subtitle = "PJM East Region: 2001-2018 (PJME)",
+       x = "Datetime",
+       y = "Energy Consumption (MW)") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 16, hjust = 0.5),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.caption = element_text(size = 10),
+    panel.grid.major = element_line(color = "grey80"),
+    panel.grid.minor = element_line(color = "grey90"),
+    plot.background = element_rect(fill = "white"),
+    panel.background = element_rect(fill = "white")
+  ) +
+  scale_x_datetime(date_labels = "%Y-%m-%d", date_breaks = "5 years") +
+  scale_y_continuous(labels = scales::comma)
+\end{lstlisting}
+
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{image.png}
+    \caption{Godzinne zużycie energii w latach 2001-2018}
+    \label{}
+\end{figure}
+
+\newpage
+
+Wykresy sezonowości rocznej, tygodniowej i dziennej przedstawiają się następująco:
+
+\begin{figure}[h]
+    \includegraphics[width=0.8\linewidth]{image2.png}
+    \caption{Sezonowość roczna}
+    \label{fig:seasonality-yearly}
+\end{figure}
+
+\begin{figure}[h]
+    \includegraphics[width=0.8\linewidth]{image3.png}
+    \caption{Sezonowość tygodniowa}
+    \label{fig:seasonality-weekly}
+\end{figure}
+
+\begin{figure}[h]
+    \includegraphics[width=1\linewidth]{image 4.png}
+    \caption{sezonowość dzienna}
+    \label{fig:enter-label}
+\end{figure}
+
+\newpage
+\subsection{Modelowanie danych i prognoza}
+  Dane dotyczące godzinowego zużycia energii mogą wykazywać regularne wzorce sezonowe w skali doby oraz do roku, ze względu na zmieniające się warunki oświetleniowe, pogodowe i klimatyczne. Model dynamicznej regresji harmonicznej jest odpowiedni do modelowania tego rodzaju sezonowości, ponieważ może uwzględnić zarówno składowe krótkookresowe (dzienną) jak i długookresowe Zakres dat danych obejmuje lata od 2001 do 2018 , co może oznaczać, że występują zmiany trendów oraz sezonowości w czasie. przy pomocy tego modelu można tę zmienność w czasie poprzez dostosowanie parametrów harmonicznych (częstotliwości i amplitudy) oraz innych zmiennych egzogenicznych, które mogą wpływać na zużycie energii.
+    Dla porównania, wykorzystany został również model ARIMA aby porównać uzyskane wyniki, podstawą do modelowania jest sprawdzenie stacjonarności szeregu.
+
+    
+Z wykonanego testu adf wynika, że szereg czasowy jest stacjonarny a więc możliwe jest dalsze modelowanie danych za pomocą modelu regresji harmonicznej oraz Arima.
+\begin{lstlisting}[caption={Test ADF }]
+adf.test(as.ts(ts_data))
+\end{lstlisting}
+Dickey-Fuller = -24.094, Lag order = 52, p-value = 0.01
+alternative hypothesis: stationary
 \end{document}
