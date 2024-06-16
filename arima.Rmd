@@ -103,7 +103,7 @@ adf.test(as.ts(ts_data))
 tomodel <- as.ts(ts_data)
 prog <- naive(tomodel, h = 336) #na następne 2 tygodnie
 accuracy(prog)
-fit <- auto.arima(tomodel, stepwise=TRUE, nmodels=10) #max 10 modeli bo zajmuje bardzo dużo czasu
+fit <- auto.arima(ts_data, stepwise=TRUE, nmodels=10) #max 10 modeli bo zajmuje bardzo dużo czasu
 checkresiduals(fit)
 ```
 
@@ -111,7 +111,20 @@ checkresiduals(fit)
 #prognoza wg autoarimy
 accuracy(fit)
 fcast <- forecast(fit, h = 336)
-autoplot(fcast) + ylab("Energy Consumption (MW)")
+
+toshow <- window(tomodel, start=8044)
+
+
+autoplot(toshow, axis.text.x = FALSE) +
+  autolayer(fcast[[4]], series = "Forecast") +
+  labs(title = "Forecast of Hourly Energy Consumption",
+       y = "Energy Consumption (MW)") +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+#chowam oś X bo autoarima zepsuła mi indeksy czasu
+
+
 ```
 
 
