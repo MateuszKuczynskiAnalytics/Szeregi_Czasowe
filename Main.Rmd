@@ -98,21 +98,32 @@ ts_data %>%
 #test ADF
 adf.test(as.ts(ts_data))
 ```
+
 ```{r}
 #modelowanie ARIMA/SARIMA funkcją auto.arima + prognoza naiwna
 tomodel <- as.ts(ts_data)
 prog <- naive(tomodel, h = 336) #na następne 2 tygodnie
 accuracy(prog)
-fit <- auto.arima(tomodel, stepwise=TRUE, nmodels=10) #max 10 modeli bo zajmuje bardzo dużo czasu
-checkresiduals(fit)
+fit <- auto.arima(tomodel, stepwise=TRUE, nmodels=20) #max 20 modeli bo zajmuje bardzo dużo czasu
 ```
 
 ```{r}
 #prognoza wg autoarimy
-accuracy(fit)
-fcast <- forecast(fit, h = 336)
-autoplot(fcast) + ylab("Energy Consumption (MW)")
+checkresiduals(fit) 
+fit$aicc
+Box.test(fit$residuals, type = "Ljung-Box")
+fcast <- forecast(fit, h=24*14)
+
 ```
+
+```{r}
+#Wykres prognozy
+autoplot(fcast, include = 24*7*6) +
+  labs(title = "Forecast of Hourly Energy Consumption",
+       x = "Datetime",
+       y = "Energy Consumption (MW)")
+```
+
 
 ```{r}
 #Model dynamicznej regresji harmonicznej
@@ -123,9 +134,12 @@ fit <- ts_data %>% model(
           fourier(period = "year", K = 5))
 )
 
-#Błąd
-glance(fit)
 ```
+```{r}
+#Błąd
+glance(fit)$AICc
+```
+
 
 ```{r}
 #Prognoza dwutygodniowa
@@ -138,7 +152,7 @@ start_date <- max(ts_data$datetime) - months(1)
 
 #Wykres prognozy
 autoplot(ts_data %>% filter(datetime >= start_date), h_energy_consumption) +
-  autolayer(forecast, .mean, PI = FALSE, series = "Forecast") +
+  autolayer(forecast, .mean) +
   labs(title = "Forecast of Hourly Energy Consumption",
        x = "Datetime",
        y = "Energy Consumption (MW)")
